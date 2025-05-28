@@ -86,6 +86,7 @@ namespace not_defteri
             cmbKategori.Items.Add("Okul");
             cmbKategori.Items.Add("Hobi");
             cmbKategori.Items.Add("Diğer");
+            cmbKategori.Items.Add("Yemek");
             this.BackColor = Color.FromArgb(245, 245, 245); // Form arka planı
 
             // Yazı fontlarını ayarla
