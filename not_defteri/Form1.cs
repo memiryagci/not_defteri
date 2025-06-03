@@ -26,9 +26,35 @@ namespace not_defteri
         public Form1()
         {
             InitializeComponent();
+            btnTemizle.Click += BtnTemizle_Click;
         }
 
-        // 🔽 BURAYA ekle:
+        private void BtnTemizle_Click(object sender, EventArgs e)
+        {
+            AlanlariTemizle();
+        }
+
+        private void NotlariFiltrele(string aramaMetni = "")
+        {
+            lstNotlar.Items.Clear();
+            var filtrelenmisNotlar = notlar;
+            
+            if (!string.IsNullOrEmpty(aramaMetni))
+            {
+                filtrelenmisNotlar = notlar.Where(n => n.IceriyorMu(aramaMetni)).ToList();
+            }
+
+            if (cmbKategoriFiltre.SelectedItem != null && cmbKategoriFiltre.SelectedItem.ToString() != "Tümü")
+            {
+                filtrelenmisNotlar = filtrelenmisNotlar.Where(n => n.Kategori == cmbKategoriFiltre.SelectedItem.ToString()).ToList();
+            }
+
+            foreach (Not not in filtrelenmisNotlar)
+            {
+                lstNotlar.Items.Add(not);
+            }
+        }
+
         private void NotlariKaydet()
         {
             string json = JsonConvert.SerializeObject(notlar, Formatting.Indented);
@@ -41,59 +67,40 @@ namespace not_defteri
             {
                 string json = File.ReadAllText("notlar.json");
                 notlar = JsonConvert.DeserializeObject<List<Not>>(json);
-                lstNotlar.Items.Clear();
-                foreach (Not not in notlar)
-                {
-                    lstNotlar.Items.Add(not);
-                }
+                NotlariFiltrele();
             }
-        }
-
-    // Diğer buton tıklama olayları...
-
-
-
-        private void label1_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void label3_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            Not gnclnot = (Not)lstNotlar.SelectedItem;
-            if (lstNotlar.SelectedItem != null)
-            {
-                txtBaslik.Text = gnclnot.Baslik;
-                cmbKategori.SelectedItem = gnclnot.Kategori;
-                rtbIcerik.Text = gnclnot.Icerik;
-            }
-
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            this.BackgroundImage = Image.FromFile("notdefteri.jpg"); // dosya adı neyse onu yaz
-            this.BackgroundImageLayout = ImageLayout.Stretch; // veya Tile, Center, Zoom
+            try
+            {
+                if (File.Exists("notdefteri.jpg"))
+                {
+                    this.BackgroundImage = Image.FromFile("notdefteri.jpg");
+                    this.BackgroundImageLayout = ImageLayout.Stretch;
+                }
+            }
+            catch (Exception)
+            {
+                // Arka plan resmi yüklenemezse sessizce devam et
+            }
 
+            // Kategori listesini oluştur
+            string[] kategoriler = new[] { "Tümü", "Kişisel", "İş", "Okul", "Hobi", "Diğer", "Yemek" };
+            cmbKategori.Items.AddRange(kategoriler.Skip(1).ToArray()); // "Tümü" hariç
+            cmbKategoriFiltre.Items.AddRange(kategoriler);
+            cmbKategoriFiltre.SelectedItem = "Tümü";
 
-            cmbKategori.Items.Add("Kişisel");
-            cmbKategori.Items.Add("İş");
-            cmbKategori.Items.Add("Okul");
-            cmbKategori.Items.Add("Hobi");
-            cmbKategori.Items.Add("Diğer");
-            cmbKategori.Items.Add("Yemek");
-            this.BackColor = Color.FromArgb(245, 245, 245); // Form arka planı
+            this.BackColor = Color.FromArgb(245, 245, 245);
 
             // Yazı fontlarını ayarla
             txtBaslik.Font = new Font("Segoe UI", 10, FontStyle.Regular);
             cmbKategori.Font = new Font("Segoe UI", 10, FontStyle.Regular);
             rtbIcerik.Font = new Font("Segoe UI", 10, FontStyle.Regular);
             lstNotlar.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+            txtArama.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+            cmbKategoriFiltre.Font = new Font("Segoe UI", 10, FontStyle.Regular);
 
             // Buton renkleri ve stilleri
             btnEkle.BackColor = Color.LightGreen;
@@ -112,74 +119,103 @@ namespace not_defteri
             btnTemizle.FlatStyle = FlatStyle.Flat;
             btnTemizle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
 
-            // Liste kutusu arka planı ve rengi
             lstNotlar.BackColor = Color.WhiteSmoke;
             lstNotlar.ForeColor = Color.Black;
 
-            // Not içeriği kutusu daha okunabilir
             rtbIcerik.BackColor = Color.White;
             rtbIcerik.ForeColor = Color.Black;
 
             NotlariYukle();
+        }
 
+        private void lstNotlar_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (lstNotlar.SelectedItem != null)
+            {
+                Not secilenNot = (Not)lstNotlar.SelectedItem;
+                txtBaslik.Text = secilenNot.Baslik;
+                cmbKategori.SelectedItem = secilenNot.Kategori;
+                rtbIcerik.Text = secilenNot.Icerik;
+            }
+        }
 
+        private void txtArama_TextChanged(object sender, EventArgs e)
+        {
+            NotlariFiltrele(txtArama.Text);
+        }
+
+        private void cmbKategoriFiltre_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            NotlariFiltrele(txtArama.Text);
         }
 
         private void btnEkle_Click(object sender, EventArgs e)
         {
-            string baslik = txtBaslik.Text;
-            string kategori = cmbKategori.SelectedItem?.ToString(); // seçili değilse null olabilir
-            string icerik = rtbIcerik.Text;
+            if (string.IsNullOrWhiteSpace(txtBaslik.Text) || cmbKategori.SelectedItem == null)
+            {
+                MessageBox.Show("Lütfen başlık ve kategori alanlarını doldurunuz.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
-            Not yeniNot = new Not();
-            yeniNot.Baslik = baslik;
-            yeniNot.Kategori = kategori;
-            yeniNot.Icerik = icerik;
-            yeniNot.Tarih = DateTime.Now;
+            Not yeniNot = new Not
+            {
+                Baslik = txtBaslik.Text,
+                Kategori = cmbKategori.SelectedItem.ToString(),
+                Icerik = rtbIcerik.Text,
+                Tarih = DateTime.Now
+            };
 
             notlar.Add(yeniNot);
-
-            lstNotlar.Items.Add(yeniNot);
-            AlanlariTemizle();
+            NotlariFiltrele(txtArama.Text);
             NotlariKaydet();
+            AlanlariTemizle();
         }
 
         private void btnSil_Click(object sender, EventArgs e)
         {
             if (lstNotlar.SelectedItem != null)
             {
-                Not secilenNot = (Not)lstNotlar.SelectedItem;
-                notlar.Remove(secilenNot); // Sadece seçileni kaldır
-                lstNotlar.Items.Clear();   // Görüntüyü temizle
-                foreach (Not not in notlar)
+                if (MessageBox.Show("Seçili notu silmek istediğinize emin misiniz?", "Onay", 
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
-                    lstNotlar.Items.Add(not); // Kalan notları yeniden listele
+                    Not secilenNot = (Not)lstNotlar.SelectedItem;
+                    notlar.Remove(secilenNot);
+                    NotlariFiltrele(txtArama.Text);
+                    NotlariKaydet();
+                    AlanlariTemizle();
                 }
-                NotlariKaydet(); // Değişiklikleri kaydet
-
             }
-            NotlariKaydet();
-            AlanlariTemizle();
-
+            else
+            {
+                MessageBox.Show("Lütfen silinecek bir not seçin.", "Uyarı", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private void btnGuncelle_Click(object sender, EventArgs e)
         {
-            Not gnclnot = (Not)lstNotlar.SelectedItem;
-            if (gnclnot != null)
+            if (lstNotlar.SelectedItem == null)
             {
-                gnclnot.Baslik = txtBaslik.Text;
-                gnclnot.Kategori = cmbKategori.SelectedItem?.ToString();
-                gnclnot.Icerik = rtbIcerik.Text;
-                lstNotlar.Items.Clear(); // listeyi temizle
-                foreach (Not not in notlar)
-                {
-                    lstNotlar.Items.Add(not); // güncellenmiş notları tekrar listeye ekle
-                }
+                MessageBox.Show("Lütfen güncellenecek bir not seçin.", "Uyarı", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
-            AlanlariTemizle();
 
+            if (string.IsNullOrWhiteSpace(txtBaslik.Text) || cmbKategori.SelectedItem == null)
+            {
+                MessageBox.Show("Lütfen başlık ve kategori alanlarını doldurunuz.", "Uyarı", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            Not secilenNot = (Not)lstNotlar.SelectedItem;
+            secilenNot.Baslik = txtBaslik.Text;
+            secilenNot.Kategori = cmbKategori.SelectedItem.ToString();
+            secilenNot.Icerik = rtbIcerik.Text;
+            
+            NotlariFiltrele(txtArama.Text);
             NotlariKaydet();
+            AlanlariTemizle();
         }
     }
 }
